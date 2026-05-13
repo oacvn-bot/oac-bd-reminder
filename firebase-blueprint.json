@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "Config": {
+      "title": "App Config",
+      "description": "Global application configuration",
+      "type": "object",
+      "properties": {
+        "startDate": { "type": "string", "format": "date-time" },
+        "totalAccounts": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["startDate", "totalAccounts", "updatedAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "member"] },
+        "chromeProfile": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role", "createdAt", "updatedAt"]
+    },
+    "Script": {
+      "title": "Email Script",
+      "description": "Daily email script content",
+      "type": "object",
+      "properties": {
+        "subject": { "type": "string" },
+        "bodyHtml": { "type": "string" },
+        "phase": { "type": "number", "enum": [1, 2, 3] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subject", "bodyHtml", "phase", "updatedAt"]
+    },
+    "Log": {
+      "title": "Daily Log",
+      "description": "User's daily checklist and volume log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "checklist": {
+          "type": "object",
+          "properties": {
+            "sent": { "type": "boolean" },
+            "replied": { "type": "boolean" },
+            "markedImportant": { "type": "boolean" },
+            "spamCheck": { "type": "boolean" }
+          },
+          "required": ["sent", "replied", "markedImportant", "spamCheck"]
+        },
+        "actualVolume": { "type": "number" },
+        "repliesReceived": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "date", "checklist", "actualVolume", "repliesReceived", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/config/app": {
+      "schema": "Config",
+      "description": "Global application state including start date to calculate phases."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profiles and roles."
+    },
+    "/scripts/{dayNumber}": {
+      "schema": "Script",
+      "description": "Daily warm-up scripts."
+    },
+    "/logs/{logId}": {
+      "schema": "Log",
+      "description": "Daily logs for each user."
+    }
+  }
+}

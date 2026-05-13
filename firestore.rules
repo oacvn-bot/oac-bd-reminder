@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isAuthed() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    // Since we only want to allow @onearw.com
+    function isOneARW() {
+      // simpler regex match
+      return isAuthed() && request.auth.token.email.matches('.*@onearw[.]com');
+    }
+
+    function isSuperAdmin() {
+      return isOneARW() && request.auth.token.email == 'oac.vn@onearw.com';
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // using exists to not crash if users doc is missing, then get
+    function isAdmin() {
+      return isSuperAdmin() || (
+             isOneARW() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    function hasKeys(data, requiredKeys) {
+      return data.keys().hasAll(requiredKeys);
+    }
+
+    match /config/{configId} {
+      allow get: if isOneARW();
+      allow list: if isOneARW();
+      // Only admin to write
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isOneARW() && (request.auth.uid == userId || isAdmin());
+      allow list: if isOneARW() && isAdmin();
+      
+      allow create: if isOneARW() && request.auth.uid == userId && hasKeys(incoming(), ['email', 'role']) && (incoming().role == 'member' || isAdmin());
+      
+      allow update: if isOneARW() && (
+        isAdmin() ||
+        (request.auth.uid == userId && incoming().role == existing().role)
+      );
+    }
+
+    match /scripts/{dayNumber} {
+      allow get: if isOneARW();
+      allow list: if isOneARW();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /logs/{logId} {
+      allow get: if isOneARW() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isOneARW() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      allow create: if isOneARW() && incoming().userId == request.auth.uid;
+      allow update: if isOneARW() && existing().userId == request.auth.uid && incoming().userId == existing().userId;
+    }
+  }
+}

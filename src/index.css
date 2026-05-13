@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3B82F6;
+  --color-primary-foreground: #ffffff;
+  --color-success: #10B981;
+  --color-success-foreground: #ffffff;
+  --color-background: #0B0E14;
+  --color-sidebar: #0D1117;
+  --color-card: #151921;
+  --color-card-foreground: #e2e8f0;
+  --color-boder: #1e293b;
+}
+
+@layer base {
+  :root {
+    background-color: var(--color-background);
+    color: #e2e8f0;
+  }
+  
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.glass {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-boder);
+}
+
+.glow-blue {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+.glow-green {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
+
+/* TipTap ProseMirror styles to ensure it looks good in a dark theme */
+.ProseMirror {
+  outline: none;
+  min-height: 150px;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #64748b;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
