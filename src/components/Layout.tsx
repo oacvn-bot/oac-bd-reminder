@@ -16,8 +16,8 @@ export default function Layout() {
 
   const navLinks = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/my-scripts', label: 'My Scripts', icon: FileText },
     ...(profile?.role === 'admin' ? [
-      { to: '/admin', label: 'Script Manager', icon: FileText },
       { to: '/team-stats', label: 'Team Monitor', icon: BarChart },
     ] : []),
   ];

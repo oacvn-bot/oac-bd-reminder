@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { format } from 'date-fns';
-import { Check, Copy, ShieldAlert, CheckCircle2, FileText } from 'lucide-react';
+import { Check, Copy, ShieldAlert, CheckCircle2, FileText, Download, Mail, CopyPlus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { getAccountRotationForDay } from '../lib/warmup-data';
 
 interface Checklist {
   sent: boolean;
@@ -40,7 +41,9 @@ export default function Dashboard() {
     else currentPhase = 3;
   }
   
-  const [script, setScript] = useState<{subject: string, bodyHtml: string} | null>(null);
+  const [script, setScript] = useState<{subject: string, bodyHtml: string, campaignEmails?: string} | null>(null);
+  const [chromeProfile, setChromeProfile] = useState<string>('Profile 1');
+  const [teamEmails, setTeamEmails] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<Checklist>({
     sent: false, replied: false, markedImportant: false, spamCheck: false
   });
@@ -50,6 +53,7 @@ export default function Dashboard() {
   const [localReplies, setLocalReplies] = useState<string>('0');
   const [loading, setLoading] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copyEmailsSuccess, setCopyEmailsSuccess] = useState(false);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const logId = `${user?.uid}_${todayStr}`;
@@ -57,20 +61,49 @@ export default function Dashboard() {
   useEffect(() => {
     // Fetch Script
     const fetchScript = async () => {
+      if (!user) return;
       try {
-        const docSnap = await getDoc(doc(db, 'scripts', currentDay.toString()));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setScript({ subject: data.subject, bodyHtml: data.bodyHtml });
+        let scriptData = null;
+        // First try to fetch personal script
+        const userDocSnap = await getDoc(doc(db, 'user_scripts', `${user.uid}_${currentDay}`));
+        
+        if (userDocSnap.exists()) {
+          scriptData = userDocSnap.data();
+        } else {
+          // Fallback to global script
+          const docSnap = await getDoc(doc(db, 'scripts', currentDay.toString()));
+          if (docSnap.exists()) {
+            scriptData = docSnap.data();
+          }
+        }
+        
+        if (scriptData) {
+          setScript({ 
+            subject: scriptData.subject, 
+            bodyHtml: scriptData.bodyHtml,
+            campaignEmails: scriptData.campaignEmails
+          });
         } else {
           setScript(null);
         }
       } catch (err) {
-        handleFirestoreError(err, OperationType.GET, `scripts/${currentDay}`);
+        handleFirestoreError(err, OperationType.GET, `user_scripts`);
       }
     };
     fetchScript();
-  }, [currentDay]);
+  }, [currentDay, user]);
+
+  useEffect(() => {
+    // Fetch team users for rotation
+    const fetchUsers = async () => {
+      // In a real app, you would fetch all users from a 'users' collection
+      // Here we just use a placeholder array for demonstration based on totalAccounts config
+      if (config?.totalAccounts) {
+         setTeamEmails(Array.from({length: config.totalAccounts}, (_, i) => `account${i+1}@onearw.com`));
+      }
+    };
+    fetchUsers();
+  }, [config]);
 
   useEffect(() => {
     if (!user) return;
@@ -137,7 +170,6 @@ export default function Dashboard() {
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
-      // Fallback for older browsers
       try {
         await navigator.clipboard.writeText(plainText);
         setCopySuccess(true);
@@ -146,6 +178,40 @@ export default function Dashboard() {
         console.error('Fallback copy failed: ', err2);
       }
     }
+  };
+
+  const handleCopyEmails = async () => {
+    if (!script?.campaignEmails) return;
+    try {
+      await navigator.clipboard.writeText(script.campaignEmails);
+      setCopyEmailsSuccess(true);
+      setTimeout(() => setCopyEmailsSuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy emails: ', err);
+    }
+  };
+
+  const handleOpenGmail = () => {
+    if (!script) return;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = script.bodyHtml;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    let mailtoLink = `mailto:?bcc=${encodeURIComponent(script.campaignEmails || '')}&subject=${encodeURIComponent(script.subject)}&body=${encodeURIComponent(plainText)}`;
+    window.open(mailtoLink, '_blank');
+  };
+
+  const generateLauncher = () => {
+    const batContent = `@echo off\nstart chrome --profile-directory="${chromeProfile}" "${window.location.origin}"`;
+    const blob = new Blob([batContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `OAC_Warmup_Launcher_${chromeProfile.replace(/\s+/g, '')}.bat`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const getTargetVolume = () => {
@@ -166,12 +232,49 @@ export default function Dashboard() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          {isCompleted ? "Warm-up Completed 🎉" : `Day ${currentDay} / 28`}
-        </h1>
-        <p className="text-slate-400 font-medium">
-          {isCompleted ? "Congratulations! You have completed the 28-day warm-up plan." : `Phase ${currentPhase} Warm-up`}
-        </p>
+        <div className="flex justify-between items-end mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              {isCompleted ? "Warm-up Completed 🎉" : `Day ${currentDay} / 28`}
+            </h1>
+            <p className="text-slate-400 font-medium">
+              {isCompleted ? "Congratulations! You have completed the 28-day warm-up plan." : `Phase ${currentPhase} Warm-up`}
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-boder">
+            <span className="text-xs text-slate-400 font-medium pl-2">Chrome Profile:</span>
+            <input 
+              type="text" 
+              value={chromeProfile}
+              onChange={(e) => setChromeProfile(e.target.value)}
+              className="bg-background border border-boder rounded-lg px-2 py-1 text-sm text-white w-24 focus:outline-none focus:border-primary"
+              placeholder="Profile 1"
+            />
+            <button
+              onClick={generateLauncher}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-sm font-medium"
+            >
+              <Download className="w-4 h-4" />
+              Get .bat
+            </button>
+          </div>
+        </div>
+
+        {/* Phase Progress Roadmap */}
+        <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden flex relative border border-boder">
+          <div className="h-full bg-amber-500/80 transition-all duration-1000 relative" style={{ width: `${Math.min(100, (currentDay / 7) * 100)}%`, maxWidth: '25%' }}></div>
+          <div className="h-full bg-blue-500/80 transition-all duration-1000 relative" style={{ width: `${Math.min(100, ((currentDay - 7) / 7) * 100)}%`, maxWidth: '25%' }}></div>
+          <div className="h-full bg-success/80 transition-all duration-1000 relative" style={{ width: `${Math.min(100, ((currentDay - 14) / 14) * 100)}%`, maxWidth: '50%' }}></div>
+          
+          <div className="absolute top-0 bottom-0 left-1/4 w-px bg-background/50 z-10"></div>
+          <div className="absolute top-0 bottom-0 left-2/4 w-px bg-background/50 z-10"></div>
+        </div>
+        <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500 mt-2 tracking-wider">
+          <span className="w-1/4 text-center">Phase 1 (Days 1-7)</span>
+          <span className="w-1/4 text-center">Phase 2 (Days 8-14)</span>
+          <span className="w-2/4 text-center">Phase 3 (Days 15-28)</span>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -249,6 +352,34 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          
+          {/* Account Rotation Tracker */}
+          <div className="glass rounded-2xl p-6">
+             <h2 className="text-lg font-semibold text-white mb-4">Account Rotation (Today)</h2>
+             {teamEmails.length > 0 ? (
+               <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                 {getAccountRotationForDay(teamEmails, currentDay).map((rotation, idx) => {
+                   const isMe = user?.email && (rotation.from === user.email || rotation.to === user.email);
+                   return (
+                     <div key={idx} className={cn(
+                       "flex items-center justify-between p-3 rounded-xl border text-sm",
+                       isMe ? "bg-primary/10 border-primary/30 glow-blue" : "bg-slate-800/30 border-boder"
+                     )}>
+                       <span className={isMe && rotation.from === user.email ? "text-white font-bold" : "text-slate-300"}>
+                         {rotation.from.split('@')[0]}
+                       </span>
+                       <span className="text-slate-500 mx-2">→</span>
+                       <span className={isMe && rotation.to === user.email ? "text-white font-bold" : "text-slate-300"}>
+                         {rotation.to.split('@')[0]}
+                       </span>
+                     </div>
+                   );
+                 })}
+               </div>
+             ) : (
+               <p className="text-sm text-slate-400 italic">No account rotation data available. Admin must set Total Accounts in config.</p>
+             )}
+          </div>
         </div>
 
         {/* Right Column: Scripts */}
@@ -259,20 +390,45 @@ export default function Dashboard() {
                 <FileText className="w-5 h-5 text-primary" />
                 Today's Script
               </h2>
-              {script && (
-                <button
-                  onClick={handleCopy}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg",
-                    copySuccess 
-                      ? "bg-success text-white glow-green" 
-                      : "bg-primary text-white hover:bg-blue-600 glow-blue"
-                  )}
-                >
-                  {copySuccess ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copySuccess ? "Copied HTML!" : "Copy for Gmail"}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {script?.campaignEmails && (
+                  <button
+                    onClick={handleCopyEmails}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-lg",
+                      copyEmailsSuccess 
+                        ? "bg-success text-white glow-green" 
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    )}
+                  >
+                    {copyEmailsSuccess ? <CheckCircle2 className="w-4 h-4" /> : <CopyPlus className="w-4 h-4" />}
+                    {copyEmailsSuccess ? "Copied!" : "Copy Emails"}
+                  </button>
+                )}
+                {script && (
+                  <>
+                    <button
+                      onClick={handleCopy}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-lg",
+                        copySuccess 
+                          ? "bg-success text-white glow-green" 
+                          : "bg-primary text-white hover:bg-blue-600 glow-blue"
+                      )}
+                    >
+                      {copySuccess ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copySuccess ? "Copied HTML!" : "Copy Body"}
+                    </button>
+                    <button
+                      onClick={handleOpenGmail}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-lg bg-rose-600 text-white hover:bg-rose-500 glow-red"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Draft in Gmail
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {script ? (

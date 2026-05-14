@@ -9,9 +9,11 @@ import { Save, AlertCircle, RefreshCw, Database, Calendar } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '@/lib/firestore-errors';
 import { format } from 'date-fns';
 
-export default function AdminScripts() {
+export default function MyScripts() {
+  const { user, profile } = useAuth();
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [subject, setSubject] = useState("");
+  const [campaignEmails, setCampaignEmails] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -53,20 +55,32 @@ export default function AdminScripts() {
 
   useEffect(() => {
     const fetchScript = async () => {
+      if (!user) return;
       setLoading(true);
       setSaveMessage("");
       try {
-        const docSnap = await getDoc(doc(db, 'scripts', selectedDay.toString()));
+        const docSnap = await getDoc(doc(db, 'user_scripts', `${user.uid}_${selectedDay}`));
         if (docSnap.exists()) {
           const data = docSnap.data();
           setSubject(data.subject || "");
+          setCampaignEmails(data.campaignEmails || "");
           editor?.commands.setContent(data.bodyHtml || "");
         } else {
-          setSubject("");
-          editor?.commands.setContent("");
+          // Fallback to global script template if available
+          const globalSnap = await getDoc(doc(db, 'scripts', selectedDay.toString()));
+          if (globalSnap.exists()) {
+            const data = globalSnap.data();
+            setSubject(data.subject || "");
+            setCampaignEmails("");
+            editor?.commands.setContent(data.bodyHtml || "");
+          } else {
+            setSubject("");
+            setCampaignEmails("");
+            editor?.commands.setContent("");
+          }
         }
       } catch (err) {
-        handleFirestoreError(err, OperationType.GET, `scripts/${selectedDay}`);
+        handleFirestoreError(err, OperationType.GET, `user_scripts/${user.uid}_${selectedDay}`);
       }
       setLoading(false);
     };
@@ -105,8 +119,11 @@ export default function AdminScripts() {
     if (selectedDay > 14) phase = 3;
 
     try {
-      await setDoc(doc(db, 'scripts', selectedDay.toString()), {
+      await setDoc(doc(db, 'user_scripts', `${user?.uid}_${selectedDay}`), {
+        userId: user?.uid,
+        day: selectedDay,
         subject,
+        campaignEmails,
         bodyHtml,
         phase,
         updatedAt: serverTimestamp()
@@ -114,7 +131,7 @@ export default function AdminScripts() {
       setSaveMessage("Script saved successfully!");
       setTimeout(() => setSaveMessage(""), 3000);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `scripts/${selectedDay}`);
+      handleFirestoreError(err, OperationType.WRITE, `user_scripts/${user?.uid}_${selectedDay}`);
       setSaveMessage("Error saving script.");
     }
     setSaving(false);
@@ -151,32 +168,36 @@ export default function AdminScripts() {
       <div className="flex justify-between items-center mb-2">
         <h1 className="text-2xl font-bold text-white">Script Manager</h1>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-background/50 border border-boder rounded-xl p-1 pr-2">
-            <div className="bg-slate-800 p-1.5 rounded-lg">
-              <Calendar className="w-4 h-4 text-slate-300" />
-            </div>
-            <input 
-              type="date"
-              value={startDateStr}
-              onChange={(e) => setStartDateStr(e.target.value)}
-              className="bg-transparent text-sm text-white focus:outline-none w-32"
-            />
-            <button
-              onClick={handleSaveConfig}
-              disabled={savingConfig || !startDateStr}
-              className="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30 transition-colors"
-            >
-              Update Start Date
-            </button>
-          </div>
-          <button
-            onClick={handleSeedDatabase}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors shadow-lg border border-boder text-sm"
-          >
-            <Database className="w-4 h-4" />
-            Seed Database
-          </button>
+          {profile?.role === 'admin' && (
+            <>
+              <div className="flex items-center gap-2 bg-background/50 border border-boder rounded-xl p-1 pr-2">
+                <div className="bg-slate-800 p-1.5 rounded-lg">
+                  <Calendar className="w-4 h-4 text-slate-300" />
+                </div>
+                <input 
+                  type="date"
+                  value={startDateStr}
+                  onChange={(e) => setStartDateStr(e.target.value)}
+                  className="bg-transparent text-sm text-white focus:outline-none w-32"
+                />
+                <button
+                  onClick={handleSaveConfig}
+                  disabled={savingConfig || !startDateStr}
+                  className="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30 transition-colors"
+                >
+                  Update Start Date
+                </button>
+              </div>
+              <button
+                onClick={handleSeedDatabase}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors shadow-lg border border-boder text-sm"
+              >
+                <Database className="w-4 h-4" />
+                Seed Database
+              </button>
+            </>
+          )}
         </div>
       </div>
       
@@ -256,8 +277,18 @@ export default function AdminScripts() {
                 className="w-full bg-background/50 border border-boder rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-lg"
               />
             </div>
+            
+            <div className="mb-6">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Campaign Emails (Comma separated)</label>
+              <textarea
+                value={campaignEmails}
+                onChange={(e) => setCampaignEmails(e.target.value)}
+                placeholder="e.g. client1@example.com, client2@domain.com"
+                className="w-full bg-background/50 border border-boder rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-sm min-h-[80px]"
+              />
+            </div>
 
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-[300px]">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Email Body (Rich Text)</label>
               
               {/* Toolbar */}

@@ -6,7 +6,7 @@ import { AppProvider } from './contexts/AppContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Admin from './pages/Admin';
+import MyScripts from './pages/MyScripts';
 import TeamStats from './pages/TeamStats';
 
 function ProtectedRoute({ children, requireAdmin }: { children: React.ReactNode, requireAdmin?: boolean }) {
@@ -37,9 +37,9 @@ export default function App() {
             
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
-              <Route path="admin" element={
-                <ProtectedRoute requireAdmin>
-                  <Admin />
+              <Route path="my-scripts" element={
+                <ProtectedRoute>
+                  <MyScripts />
                 </ProtectedRoute>
               } />
               <Route path="team-stats" element={
