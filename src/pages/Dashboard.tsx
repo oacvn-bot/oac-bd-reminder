@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db } from '@/firebase/config';
 import { format } from 'date-fns';
 import { Check, Copy, ShieldAlert, CheckCircle2, FileText } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -16,8 +16,29 @@ interface Checklist {
 }
 
 export default function Dashboard() {
-  const { currentDay, currentPhase, config } = useAppContext();
+  const { config } = useAppContext();
   const { user } = useAuth();
+  
+  let currentDay = 1;
+  let currentPhase = 1;
+  let isCompleted = false;
+
+  if (config?.startDate) {
+    const today = new Date();
+    const start = new Date(config.startDate);
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    currentDay = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+    if (currentDay > 28) {
+      isCompleted = true;
+      currentDay = 28; // Cap for phase display, or keep it
+    }
+    if (currentDay < 1) currentDay = 1;
+
+    if (currentDay <= 7) currentPhase = 1;
+    else if (currentDay <= 14) currentPhase = 2;
+    else currentPhase = 3;
+  }
   
   const [script, setScript] = useState<{subject: string, bodyHtml: string} | null>(null);
   const [checklist, setChecklist] = useState<Checklist>({
@@ -145,8 +166,12 @@ export default function Dashboard() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Day {currentDay} / 28</h1>
-        <p className="text-slate-400 font-medium">Phase {currentPhase} Warm-up</p>
+        <h1 className="text-3xl font-bold text-white mb-2">
+          {isCompleted ? "Warm-up Completed 🎉" : `Day ${currentDay} / 28`}
+        </h1>
+        <p className="text-slate-400 font-medium">
+          {isCompleted ? "Congratulations! You have completed the 28-day warm-up plan." : `Phase ${currentPhase} Warm-up`}
+        </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -176,7 +201,10 @@ export default function Dashboard() {
                 { key: 'markedImportant', label: 'Marked Important' },
                 { key: 'spamCheck', label: 'Spam Checked & Pulled' },
               ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                <label key={key} className="flex items-center gap-3 cursor-pointer group" onClick={(e) => {
+                  e.preventDefault();
+                  handleCheck(key as keyof Checklist);
+                }}>
                   <div className={cn(
                     "w-5 h-5 flex items-center justify-center rounded border-2 transition-colors",
                     checklist[key as keyof Checklist] 
