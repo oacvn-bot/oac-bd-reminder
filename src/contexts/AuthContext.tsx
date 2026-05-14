@@ -33,21 +33,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       
       if (firebaseUser) {
-        if (!firebaseUser.email?.endsWith('@onearw.com')) {
-          await firebaseSignOut(auth);
-          setError("Unauthorized: Please use your @onearw.com email.");
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
+        // No domain restriction - any Google account can log in
 
         try {
           const userRef = doc(db, 'users', firebaseUser.uid);
           const docSnap = await getDoc(userRef);
           
+          const ADMIN_EMAILS = [
+            'oac.vn@onearw.com',
+            'lauren.luu@onearw.com',
+            'ellie.tran@onearw.com',
+          ];
           let role: 'member' | 'admin' = 'member';
-          if (firebaseUser.email === 'oac.vn@onearw.com') {
+          if (firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email)) {
             role = 'admin';
           }
 
@@ -69,6 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
              if (role === 'admin' && data.role !== 'admin') {
                 await setDoc(userRef, { role: 'admin', updatedAt: serverTimestamp() }, { merge: true });
                 data.role = 'admin';
+             } else if (role === 'member' && data.role === 'admin') {
+                // Don't downgrade admin role if previously set by another admin
              }
             setProfile(data);
           }
@@ -91,7 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
-      hd: 'onearw.com',
       prompt: 'select_account'
     });
     try {

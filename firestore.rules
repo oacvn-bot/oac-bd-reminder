@@ -5,68 +5,64 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Any authenticated user with a verified email
     function isAuthed() {
       return request.auth != null && request.auth.token.email_verified == true;
     }
 
-    // Since we only want to allow @onearw.com
-    function isOneARW() {
-      // simpler regex match
-      return isAuthed() && request.auth.token.email.matches('.*@onearw[.]com');
-    }
-
-    function isSuperAdmin() {
-      return isOneARW() && request.auth.token.email == 'oac.vn@onearw.com';
+    // Hardcoded admin emails (Team Admins)
+    function isAdmin() {
+      return isAuthed() && (
+        request.auth.token.email == 'oac.vn@onearw.com' ||
+        request.auth.token.email == 'lauren.luu@onearw.com' ||
+        request.auth.token.email == 'ellie.tran@onearw.com' ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        )
+      );
     }
 
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
-    // using exists to not crash if users doc is missing, then get
-    function isAdmin() {
-      return isSuperAdmin() || (
-             isOneARW() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
-    }
-
-    function hasKeys(data, requiredKeys) {
-      return data.keys().hasAll(requiredKeys);
-    }
-
+    // Global config - all auth'd users can read, only admin can write
     match /config/{configId} {
-      allow get: if isOneARW();
-      allow list: if isOneARW();
-      // Only admin to write
-      allow create: if isAdmin();
-      allow update: if isAdmin();
+      allow get, list: if isAuthed();
+      allow create, update: if isAdmin();
     }
 
+    // User profiles
     match /users/{userId} {
-      allow get: if isOneARW() && (request.auth.uid == userId || isAdmin());
-      allow list: if isOneARW() && isAdmin();
-      
-      allow create: if isOneARW() && request.auth.uid == userId && hasKeys(incoming(), ['email', 'role']) && (incoming().role == 'member' || isAdmin());
-      
-      allow update: if isOneARW() && (
+      allow get: if isAuthed() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAuthed() && isAdmin();
+      allow create: if isAuthed() && request.auth.uid == userId;
+      allow update: if isAuthed() && (
         isAdmin() ||
         (request.auth.uid == userId && incoming().role == existing().role)
       );
     }
 
+    // Global script templates (Admin sets, all users read)
     match /scripts/{dayNumber} {
-      allow get: if isOneARW();
-      allow list: if isOneARW();
+      allow get, list: if isAuthed();
       allow create, update, delete: if isAdmin();
     }
 
+    // Personal user scripts (user writes own, admin can read all)
+    match /user_scripts/{scriptId} {
+      allow get: if isAuthed() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isAuthed() && isAdmin();
+      allow create: if isAuthed() && incoming().userId == request.auth.uid;
+      allow update: if isAuthed() && existing().userId == request.auth.uid;
+    }
+
+    // Daily logs (user writes own, admin can read all)
     match /logs/{logId} {
-      allow get: if isOneARW() && (existing().userId == request.auth.uid || isAdmin());
-      allow list: if isOneARW() && (resource.data.userId == request.auth.uid || isAdmin());
-      
-      allow create: if isOneARW() && incoming().userId == request.auth.uid;
-      allow update: if isOneARW() && existing().userId == request.auth.uid && incoming().userId == existing().userId;
+      allow get: if isAuthed() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isAuthed() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthed() && incoming().userId == request.auth.uid;
+      allow update: if isAuthed() && existing().userId == request.auth.uid && incoming().userId == existing().userId;
     }
   }
 }
