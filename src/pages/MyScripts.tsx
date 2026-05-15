@@ -21,6 +21,9 @@ export default function MyScripts() {
   const [startDateStr, setStartDateStr] = useState<string>("");
   const [savingConfig, setSavingConfig] = useState(false);
 
+  const [isImportMode, setIsImportMode] = useState(false);
+  const [rawHtml, setRawHtml] = useState("");
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -137,6 +140,50 @@ export default function MyScripts() {
     setSaving(false);
   };
 
+  const handleProcessImport = () => {
+    if (!rawHtml.trim()) return;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, 'text/html');
+    let extractedSubject = "";
+
+    const elements = Array.from(doc.body.querySelectorAll('p, div, strong, b, h1, h2, h3'));
+    for (const el of elements) {
+      const text = el.textContent?.trim() || "";
+      const match = text.match(/^Subject\s*(?:line)?\s*:\s*(.*)/i);
+      if (match && match[1]) {
+        extractedSubject = match[1].trim();
+        let toRemove = el;
+        if (el.parentElement && (el.parentElement.tagName === 'P' || el.parentElement.tagName === 'DIV')) {
+           if (el.parentElement.textContent?.trim() === text) {
+               toRemove = el.parentElement;
+           }
+        }
+        toRemove.remove();
+        break;
+      }
+    }
+
+    let finalHtml = doc.body.innerHTML;
+    if (!extractedSubject) {
+      const rawTextMatch = finalHtml.match(/Subject\s*(?:line)?\s*:\s*([^<]+)/i);
+      if (rawTextMatch && rawTextMatch[1]) {
+        extractedSubject = rawTextMatch[1].trim();
+        finalHtml = finalHtml.replace(/Subject\s*(?:line)?\s*:\s*([^<]+)/i, '');
+      }
+    }
+
+    if (extractedSubject) {
+      setSubject(extractedSubject);
+    }
+    
+    finalHtml = finalHtml.replace(/^(<br\s*\/?>|\s|<p>\s*<\/p>)+/gi, '');
+
+    editor?.commands.setContent(finalHtml);
+    setIsImportMode(false);
+    setRawHtml("");
+  };
+
   const handleSeedDatabase = async () => {
     setSaving(true);
     setSaveMessage("");
@@ -245,15 +292,41 @@ export default function MyScripts() {
             <h2 className="text-xl font-bold text-white mb-1">Edit Script • Day {selectedDay}</h2>
             <p className="text-sm text-slate-400">Phase {selectedDay <= 7 ? 1 : selectedDay <= 14 ? 2 : 3} Warm-up</p>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving || loading}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white hover:bg-blue-600 transition-all font-medium disabled:opacity-50 shadow-lg shadow-primary/25 glow-blue"
-          >
-            {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Save Changes
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsImportMode(!isImportMode)}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-medium border border-boder"
+            >
+              {isImportMode ? "Cancel Import" : "AI HTML Import"}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || loading}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white hover:bg-blue-600 transition-all font-medium disabled:opacity-50 shadow-lg shadow-primary/25 glow-blue"
+            >
+              {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              Save Changes
+            </button>
+          </div>
         </div>
+
+        {isImportMode && (
+          <div className="p-6 border-b border-boder bg-slate-900/50">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Paste AI Generated HTML Script</label>
+            <textarea
+              value={rawHtml}
+              onChange={(e) => setRawHtml(e.target.value)}
+              placeholder={`<p><strong>Subject:</strong> Quick question</p>\n<p>Hi [Name],</p>`}
+              className="w-full bg-background border border-boder rounded-xl px-4 py-3 text-slate-300 focus:outline-none focus:border-primary transition-colors text-sm min-h-[120px] font-mono mb-3"
+            />
+            <button
+              onClick={handleProcessImport}
+              className="px-4 py-2 bg-primary/20 text-primary rounded-lg text-sm font-medium hover:bg-primary/30 transition-colors"
+            >
+              Process & Fill Form
+            </button>
+          </div>
+        )}
 
         {saveMessage && (
           <div className={`px-6 py-3 border-b border-boder text-sm font-medium ${saveMessage.includes('Error') ? 'bg-rose-500/10 text-rose-500' : 'bg-success/10 text-success glow-green'}`}>
