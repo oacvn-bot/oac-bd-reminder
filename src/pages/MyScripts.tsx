@@ -9,6 +9,18 @@ import { Save, AlertCircle, RefreshCw, Database, Calendar } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '@/lib/firestore-errors';
 import { format } from 'date-fns';
 
+const TEAM_EMAILS = [
+  'coby.nguyen@onearw.com',
+  'cindi.nguyen@onearw.com',
+  'tracy.duong@onearw.com',
+  'chloe.ma@onearw.com',
+  'daisy.vu@onearw.com',
+  'matthew.dau@onearw.com',
+  'tyler.nguyen@onearw.com',
+  'lucy.pham@onearw.com',
+  'tess.luong@onearw.com'
+];
+
 export default function MyScripts() {
   const { user, profile } = useAuth();
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -23,6 +35,10 @@ export default function MyScripts() {
 
   const [isImportMode, setIsImportMode] = useState(false);
   const [rawHtml, setRawHtml] = useState("");
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -182,6 +198,35 @@ export default function MyScripts() {
     editor?.commands.setContent(finalHtml);
     setIsImportMode(false);
     setRawHtml("");
+  };
+
+  const handleEmailsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setCampaignEmails(val);
+
+    const parts = val.split(',');
+    const lastPart = parts[parts.length - 1].trim().toLowerCase();
+    
+    if (lastPart.length > 0) {
+      const matched = TEAM_EMAILS.filter(email => email.toLowerCase().includes(lastPart) && email.toLowerCase() !== lastPart);
+      if (matched.length > 0) {
+        setSuggestions(matched);
+        setShowSuggestions(true);
+      } else {
+        setShowSuggestions(false);
+      }
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (email: string) => {
+    const parts = campaignEmails.split(',');
+    parts.pop(); 
+    const newVal = [...parts.map(p => p.trim()), email].filter(Boolean).join(', ') + ', ';
+    setCampaignEmails(newVal);
+    setShowSuggestions(false);
+    textareaRef.current?.focus();
   };
 
   const handleSeedDatabase = async () => {
@@ -351,14 +396,46 @@ export default function MyScripts() {
               />
             </div>
             
-            <div className="mb-6">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Campaign Emails (Comma separated)</label>
+            <div className="mb-6 relative">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Campaign Emails (Assign Team Members)</label>
+              
+              <div className="flex flex-wrap gap-2 mb-3">
+                {TEAM_EMAILS.map(email => {
+                  const isSelected = campaignEmails.includes(email);
+                  if (isSelected) return null;
+                  return (
+                    <button
+                      key={email}
+                      onClick={() => handleSuggestionClick(email)}
+                      className="text-[11px] px-2 py-1 bg-slate-800 hover:bg-primary/20 hover:text-primary text-slate-400 rounded-full transition-colors border border-boder"
+                    >
+                      + {email.split('@')[0]}
+                    </button>
+                  )
+                })}
+              </div>
+
               <textarea
+                ref={textareaRef}
                 value={campaignEmails}
-                onChange={(e) => setCampaignEmails(e.target.value)}
-                placeholder="e.g. client1@example.com, client2@domain.com"
+                onChange={handleEmailsChange}
+                placeholder="e.g. coby.nguyen@onearw.com, cindi.nguyen@onearw.com"
                 className="w-full bg-background/50 border border-boder rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-sm min-h-[80px]"
               />
+              
+              {showSuggestions && (
+                <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-boder rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                  {suggestions.map(email => (
+                    <button
+                      key={email}
+                      onClick={() => handleSuggestionClick(email)}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-700 text-sm text-slate-200 transition-colors"
+                    >
+                      {email}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex-1 flex flex-col min-h-[300px]">
