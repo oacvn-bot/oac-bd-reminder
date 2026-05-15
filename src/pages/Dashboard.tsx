@@ -17,29 +17,10 @@ interface Checklist {
 }
 
 export default function Dashboard() {
-  const { config } = useAppContext();
+  const { config, currentDay, currentPhase } = useAppContext();
   const { user } = useAuth();
   
-  let currentDay = 1;
-  let currentPhase = 1;
-  let isCompleted = false;
-
-  if (config?.startDate) {
-    const today = new Date();
-    const start = new Date(config.startDate);
-    today.setHours(0, 0, 0, 0);
-    start.setHours(0, 0, 0, 0);
-    currentDay = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
-    if (currentDay > 28) {
-      isCompleted = true;
-      currentDay = 28; // Cap for phase display, or keep it
-    }
-    if (currentDay < 1) currentDay = 1;
-
-    if (currentDay <= 7) currentPhase = 1;
-    else if (currentDay <= 14) currentPhase = 2;
-    else currentPhase = 3;
-  }
+  const isCompleted = currentDay >= 28;
   
   const [script, setScript] = useState<{subject: string, bodyHtml: string, campaignEmails?: string} | null>(null);
   const [chromeProfile, setChromeProfile] = useState<string>('Profile 1');
@@ -242,13 +223,13 @@ export default function Dashboard() {
             </p>
           </div>
           
-          <div className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-boder">
+          <div className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-border">
             <span className="text-xs text-slate-400 font-medium pl-2">Chrome Profile:</span>
             <input 
               type="text" 
               value={chromeProfile}
               onChange={(e) => setChromeProfile(e.target.value)}
-              className="bg-background border border-boder rounded-lg px-2 py-1 text-sm text-white w-24 focus:outline-none focus:border-primary"
+              className="bg-background border border-border rounded-lg px-2 py-1 text-sm text-white w-24 focus:outline-none focus:border-primary"
               placeholder="Profile 1"
             />
             <button
@@ -262,7 +243,7 @@ export default function Dashboard() {
         </div>
 
         {/* Phase Progress Roadmap */}
-        <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden flex relative border border-boder">
+        <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden flex relative border border-border">
           <div className="h-full bg-amber-500/80 transition-all duration-1000 relative" style={{ width: `${Math.min(100, (currentDay / 7) * 100)}%`, maxWidth: '25%' }}></div>
           <div className="h-full bg-blue-500/80 transition-all duration-1000 relative" style={{ width: `${Math.min(100, ((currentDay - 7) / 7) * 100)}%`, maxWidth: '25%' }}></div>
           <div className="h-full bg-success/80 transition-all duration-1000 relative" style={{ width: `${Math.min(100, ((currentDay - 14) / 14) * 100)}%`, maxWidth: '50%' }}></div>
@@ -326,7 +307,7 @@ export default function Dashboard() {
               ))}
             </div>
             
-            <div className="mt-8 pt-6 border-t border-boder">
+            <div className="mt-8 pt-6 border-t border-border">
               <h3 className="text-sm font-medium text-slate-300 mb-4">Volume Tracking</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -336,7 +317,7 @@ export default function Dashboard() {
                     value={localVolume}
                     onChange={(e) => setLocalVolume(e.target.value)}
                     onBlur={() => updateLog(checklist, parseInt(localVolume) || 0, repliesReceived)}
-                    className="w-full bg-background/50 border border-boder rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary transition-colors"
+                    className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary transition-colors"
                   />
                 </div>
                 <div>
@@ -346,7 +327,7 @@ export default function Dashboard() {
                     value={localReplies}
                     onChange={(e) => setLocalReplies(e.target.value)}
                     onBlur={() => updateLog(checklist, actualVolume, parseInt(localReplies) || 0)}
-                    className="w-full bg-background/50 border border-boder rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary transition-colors"
+                    className="w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary transition-colors"
                   />
                 </div>
               </div>
@@ -363,7 +344,7 @@ export default function Dashboard() {
                    return (
                      <div key={idx} className={cn(
                        "flex items-center justify-between p-3 rounded-xl border text-sm",
-                       isMe ? "bg-primary/10 border-primary/30 glow-blue" : "bg-slate-800/30 border-boder"
+                       isMe ? "bg-primary/10 border-primary/30 glow-blue" : "bg-slate-800/30 border-border"
                      )}>
                        <span className={isMe && rotation.from === user.email ? "text-white font-bold" : "text-slate-300"}>
                          {rotation.from.split('@')[0]}
@@ -435,12 +416,12 @@ export default function Dashboard() {
               <div className="flex-1 flex flex-col pt-4">
                 <div className="mb-4 space-y-1">
                   <label className="text-[10px] uppercase text-primary font-bold tracking-widest block">Subject Line</label>
-                  <p className="text-lg font-semibold text-white bg-slate-800/30 p-3 rounded-lg border border-boder italic">{script.subject}</p>
+                  <p className="text-lg font-semibold text-white bg-slate-800/30 p-3 rounded-lg border border-border italic">{script.subject}</p>
                 </div>
                 
                 <div className="space-y-1 flex-1 flex flex-col mb-4 min-h-0">
                   <label className="text-[10px] uppercase text-primary font-bold tracking-widest block">Body Content</label>
-                  <div className="text-sm text-slate-300 bg-slate-800/30 p-4 rounded-lg border border-boder flex-1 overflow-y-auto leading-relaxed prose prose-invert max-w-none">
+                  <div className="text-sm text-slate-300 bg-slate-800/30 p-4 rounded-lg border border-border flex-1 overflow-y-auto leading-relaxed prose prose-invert max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: script.bodyHtml }} />
                   </div>
                 </div>

@@ -170,7 +170,7 @@ export default function MyScripts() {
         <div className="flex items-center gap-4">
           {profile?.role === 'admin' && (
             <>
-              <div className="flex items-center gap-2 bg-background/50 border border-boder rounded-xl p-1 pr-2">
+              <div className="flex items-center gap-2 bg-background/50 border border-border rounded-xl p-1 pr-2">
                 <div className="bg-slate-800 p-1.5 rounded-lg">
                   <Calendar className="w-4 h-4 text-slate-300" />
                 </div>
@@ -191,7 +191,7 @@ export default function MyScripts() {
               <button
                 onClick={handleSeedDatabase}
                 disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors shadow-lg border border-boder text-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors shadow-lg border border-border text-sm"
               >
                 <Database className="w-4 h-4" />
                 Seed Database
@@ -204,7 +204,7 @@ export default function MyScripts() {
       <div className="flex flex-1 gap-6 min-h-0">
         {/* Sidebar: Day List */}
         <div className="w-64 glass rounded-2xl flex flex-col overflow-hidden shrink-0">
-          <div className="p-4 border-b border-boder bg-background/50">
+          <div className="p-4 border-b border-border bg-background/50">
             <h2 className="font-semibold text-white">28-Day Plan</h2>
             <p className="text-xs text-slate-400">Select a day to edit</p>
           </div>
@@ -240,7 +240,7 @@ export default function MyScripts() {
 
       {/* Main Editor Area */}
       <div className="flex-1 glass rounded-2xl flex flex-col overflow-hidden">
-        <div className="p-6 border-b border-boder flex justify-between items-center bg-background/50">
+        <div className="p-6 border-b border-border flex justify-between items-center bg-background/50">
           <div>
             <h2 className="text-xl font-bold text-white mb-1">Edit Script • Day {selectedDay}</h2>
             <p className="text-sm text-slate-400">Phase {selectedDay <= 7 ? 1 : selectedDay <= 14 ? 2 : 3} Warm-up</p>
@@ -256,7 +256,7 @@ export default function MyScripts() {
         </div>
 
         {saveMessage && (
-          <div className={`px-6 py-3 border-b border-boder text-sm font-medium ${saveMessage.includes('Error') ? 'bg-rose-500/10 text-rose-500' : 'bg-success/10 text-success glow-green'}`}>
+          <div className={`px-6 py-3 border-b border-border text-sm font-medium ${saveMessage.includes('Error') ? 'bg-rose-500/10 text-rose-500' : 'bg-success/10 text-success glow-green'}`}>
             {saveMessage}
           </div>
         )}
@@ -274,7 +274,7 @@ export default function MyScripts() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Quick question about [Company]"
-                className="w-full bg-background/50 border border-boder rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-lg"
+                className="w-full bg-background/50 border border-border rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-lg"
               />
             </div>
             
@@ -284,7 +284,7 @@ export default function MyScripts() {
                 value={campaignEmails}
                 onChange={(e) => setCampaignEmails(e.target.value)}
                 placeholder="e.g. client1@example.com, client2@domain.com"
-                className="w-full bg-background/50 border border-boder rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-sm min-h-[80px]"
+                className="w-full bg-background/50 border border-border rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-sm min-h-[80px]"
               />
             </div>
 
@@ -292,7 +292,7 @@ export default function MyScripts() {
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Email Body (Rich Text)</label>
               
               {/* Toolbar */}
-              <div className="flex items-center gap-2 mb-2 p-2 bg-background/50 border border-boder rounded-lg">
+              <div className="flex items-center gap-2 mb-2 p-2 bg-background/50 border border-border rounded-lg">
                 <button
                   onClick={() => editor?.chain().focus().toggleBold().run()}
                   className={`p-2 rounded ${editor?.isActive('bold') ? 'bg-primary/20 text-primary' : 'text-slate-400 hover:text-slate-200'}`}
@@ -307,7 +307,7 @@ export default function MyScripts() {
                 </button>
               </div>
 
-              <div className="flex-1 bg-background/50 border border-boder rounded-xl p-4 cursor-text overflow-y-auto">
+              <div className="flex-1 bg-background/50 border border-border rounded-xl p-4 cursor-text overflow-y-auto">
                 <EditorContent editor={editor} />
               </div>
             </div>

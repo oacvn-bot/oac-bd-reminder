@@ -51,6 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!docSnap.exists()) {
             // Create user profile
+            if (!firebaseUser.email) {
+              throw new Error("User email is required for profile creation");
+            }
+
             const newProfile: UserProfile = {
               email: firebaseUser.email,
               role,
