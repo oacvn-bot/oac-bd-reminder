@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MyScripts from './pages/MyScripts';
 import TeamStats from './pages/TeamStats';
+import UserGuide from './pages/UserGuide';
 
 function ProtectedRoute({ children, requireAdmin }: { children: React.ReactNode, requireAdmin?: boolean }) {
   const { user, profile, loading } = useAuth();
@@ -40,6 +41,11 @@ export default function App() {
               <Route path="my-scripts" element={
                 <ProtectedRoute>
                   <MyScripts />
+                </ProtectedRoute>
+              } />
+              <Route path="guide" element={
+                <ProtectedRoute>
+                  <UserGuide />
                 </ProtectedRoute>
               } />
               <Route path="team-stats" element={

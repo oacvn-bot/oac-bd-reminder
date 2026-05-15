@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, FileText, Settings, LogOut, BarChart } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, LogOut, BarChart, BookOpen } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 
@@ -17,6 +17,7 @@ export default function Layout() {
   const navLinks = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/my-scripts', label: 'My Scripts', icon: FileText },
+    { to: '/guide', label: 'User Guide', icon: BookOpen },
     ...(profile?.role === 'admin' ? [
       { to: '/team-stats', label: 'Team Monitor', icon: BarChart },
     ] : []),
