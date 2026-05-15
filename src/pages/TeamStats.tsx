@@ -88,7 +88,7 @@ export default function TeamStats() {
         </div>
         <button
           onClick={generateLauncher}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors shadow-lg border border-boder"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors shadow-lg border border-border"
         >
           <Download className="w-4 h-4" />
           Get .bat Launcher
@@ -159,7 +159,7 @@ export default function TeamStats() {
           <div className="flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-boder text-slate-400 text-xs uppercase tracking-wider">
+                <tr className="border-b border-border text-slate-400 text-xs uppercase tracking-wider">
                   <th className="pb-3 px-2 font-medium">User</th>
                   <th className="pb-3 px-2 font-medium">Sent</th>
                   <th className="pb-3 px-2 font-medium">Replied</th>
@@ -167,7 +167,7 @@ export default function TeamStats() {
                   <th className="pb-3 px-2 font-medium">Spam Check</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-boder text-sm">
+              <tbody className="divide-y divide-border text-sm">
                 {chartData.map((user, i) => (
                   <tr key={i} className="group hover:bg-white/5 transition-colors">
                     <td className="py-4 px-2 font-medium text-slate-200">

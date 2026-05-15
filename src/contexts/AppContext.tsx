@@ -12,6 +12,7 @@ interface AppContextType {
   config: AppConfig | null;
   currentDay: number;
   currentPhase: number;
+  isCompleted: boolean;
   loading: boolean;
 }
 
@@ -42,22 +43,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   let currentDay = 1;
   let currentPhase = 1;
+  let isCompleted = false;
 
   if (config?.startDate) {
     const start = startOfDay(new Date(config.startDate));
     const today = startOfDay(new Date());
     currentDay = differenceInDays(today, start) + 1;
-    // Cap at 28 days
-    if (currentDay > 28) currentDay = 28;
+
+    if (currentDay > 28) {
+      isCompleted = true;
+    }
+
     if (currentDay < 1) currentDay = 1;
 
-    if (currentDay <= 7) currentPhase = 1;
-    else if (currentDay <= 14) currentPhase = 2;
+    const displayDay = currentDay > 28 ? 28 : currentDay;
+
+    if (displayDay <= 7) currentPhase = 1;
+    else if (displayDay <= 14) currentPhase = 2;
     else currentPhase = 3;
   }
 
   return (
-    <AppContext.Provider value={{ config, currentDay, currentPhase, loading }}>
+    <AppContext.Provider value={{ config, currentDay, currentPhase, isCompleted, loading }}>
       {children}
     </AppContext.Provider>
   );

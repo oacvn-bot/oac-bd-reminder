@@ -16,6 +16,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   error: string | null;
 }
 
@@ -51,6 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!docSnap.exists()) {
             // Create user profile
+            if (!firebaseUser.email) {
+              throw new Error("User email is required for profile creation");
+            }
+
             const newProfile: UserProfile = {
               email: firebaseUser.email,
               role,
@@ -109,8 +114,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setProfile(prev => prev ? { ...prev, ...updates } : null);
+    } catch (err) {
+      console.error("Error updating user profile:", err);
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut, error }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut, updateProfile, error }}>
       {children}
     </AuthContext.Provider>
   );
