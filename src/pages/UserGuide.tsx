@@ -85,16 +85,17 @@ export default function UserGuide() {
               </p>
               <h3 className="text-lg font-medium text-white mt-4 mb-2">Tính năng này hoạt động thế nào?</h3>
               <ul className="list-disc pl-5 space-y-2">
-                <li>Script này sẽ kết nối với <strong>Windows Task Scheduler</strong> trên máy tính của bạn.</li>
-                <li>Đúng thời gian bạn đã cài đặt (ví dụ 9h sáng), hệ thống Windows sẽ tự chạy file <code>.bat</code>.</li>
-                <li>File này sử dụng lệnh command line để kích hoạt <strong>Profile Chrome làm việc</strong> của bạn và tự động mở thẳng vào đường link OAC Warm-Up Hub.</li>
-                <li>Vì nó sử dụng trực tiếp Profile Chrome (dữ liệu Cookie có sẵn), bạn sẽ không phải đăng nhập lại mỗi lần nó mở lên.</li>
+                <li>Script này dùng để mở <strong>Profile Chrome làm việc</strong> của bạn và tự động truy cập thẳng vào OAC Warm-Up Hub.</li>
+                <li>Nó không tự động chạy theo giờ! Bạn cần phải gán nó vào <strong>Windows Task Scheduler</strong> để chọn khung giờ mà bạn muốn nhắc nhở (ví dụ: 9h00 sáng mỗi ngày).</li>
+                <li>Vì nó sử dụng trực tiếp Profile Chrome (dữ liệu Cookie có sẵn), bạn sẽ không phải đăng nhập lại.</li>
               </ul>
               <h3 className="text-lg font-medium text-white mt-4 mb-2">Cách cài đặt:</h3>
               <ol className="list-decimal pl-5 space-y-2">
-                <li>Vào màn hình Dashboard, cuộn xuống phần "Auto-Launcher".</li>
-                <li>Tải file <code>.bat</code> về máy.</li>
-                <li>Click đúp vào file để chạy lần đầu tiên. Nó sẽ tự động đăng ký với Windows Task Scheduler.</li>
+                <li>Vào màn hình Dashboard (góc trên cùng bên phải). Điền tên Profile Chrome của bạn (ví dụ: Profile 1) và bấm <strong>Get .bat</strong> để tải file về.</li>
+                <li>Mở ứng dụng <strong>Task Scheduler</strong> trên Windows của bạn.</li>
+                <li>Tạo một Task mới (Create Basic Task), chọn Trigger là "Daily" (Hằng ngày) và <strong>set khung giờ bạn muốn mở</strong> (ví dụ 9h00).</li>
+                <li>Ở phần Action, chọn "Start a program" và trỏ đường dẫn đến file <code>.bat</code> bạn vừa tải về.</li>
+                <li>Từ giờ trở đi, cứ đúng giờ đó, Windows sẽ tự động bung file trình duyệt web lên đập vào mắt bạn để bạn không thể quên việc gửi email!</li>
               </ol>
             </section>
           </div>
