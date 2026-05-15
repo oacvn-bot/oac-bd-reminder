@@ -26,6 +26,7 @@ export default function MyScripts() {
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [subject, setSubject] = useState("");
   const [campaignEmails, setCampaignEmails] = useState("");
+  const [emailsToSend, setEmailsToSend] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -39,6 +40,20 @@ export default function MyScripts() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const [showToSendSuggestions, setShowToSendSuggestions] = useState(false);
+  const [toSendSuggestions, setToSendSuggestions] = useState<string[]>([]);
+  const toSendTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [recentToSendEmails, setRecentToSendEmails] = useState<string[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('OAC_RECENT_EMAILS');
+    if (stored) {
+      try {
+        setRecentToSendEmails(JSON.parse(stored));
+      } catch(e) {}
+    }
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -83,6 +98,7 @@ export default function MyScripts() {
           const data = docSnap.data();
           setSubject(data.subject || "");
           setCampaignEmails(data.campaignEmails || "");
+          setEmailsToSend(data.emailsToSend || "");
           editor?.commands.setContent(data.bodyHtml || "");
         } else {
           // Fallback to global script template if available
@@ -91,10 +107,12 @@ export default function MyScripts() {
             const data = globalSnap.data();
             setSubject(data.subject || "");
             setCampaignEmails("");
+            setEmailsToSend(data.emailsToSend || "");
             editor?.commands.setContent(data.bodyHtml || "");
           } else {
             setSubject("");
             setCampaignEmails("");
+            setEmailsToSend("");
             editor?.commands.setContent("");
           }
         }
@@ -138,11 +156,22 @@ export default function MyScripts() {
     if (selectedDay > 14) phase = 3;
 
     try {
+      // Save recent emails to send to local storage
+      const newRecents = new Set(recentToSendEmails);
+      emailsToSend.split(',').forEach(e => {
+        const em = e.trim().toLowerCase();
+        if (em) newRecents.add(em);
+      });
+      const updatedRecents = Array.from(newRecents);
+      setRecentToSendEmails(updatedRecents);
+      localStorage.setItem('OAC_RECENT_EMAILS', JSON.stringify(updatedRecents));
+
       await setDoc(doc(db, 'user_scripts', `${user?.uid}_${selectedDay}`), {
         userId: user?.uid,
         day: selectedDay,
         subject,
         campaignEmails,
+        emailsToSend,
         bodyHtml,
         phase,
         updatedAt: serverTimestamp()
@@ -227,6 +256,35 @@ export default function MyScripts() {
     setCampaignEmails(newVal);
     setShowSuggestions(false);
     textareaRef.current?.focus();
+  };
+
+  const handleToSendEmailsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setEmailsToSend(val);
+
+    const parts = val.split(',');
+    const lastPart = parts[parts.length - 1].trim().toLowerCase();
+    
+    if (lastPart.length > 0) {
+      const matched = recentToSendEmails.filter(email => email.toLowerCase().includes(lastPart) && email.toLowerCase() !== lastPart);
+      if (matched.length > 0) {
+        setToSendSuggestions(matched);
+        setShowToSendSuggestions(true);
+      } else {
+        setShowToSendSuggestions(false);
+      }
+    } else {
+      setShowToSendSuggestions(false);
+    }
+  };
+
+  const handleToSendSuggestionClick = (email: string) => {
+    const parts = emailsToSend.split(',');
+    parts.pop(); 
+    const newVal = [...parts.map(p => p.trim()), email].filter(Boolean).join(', ') + ', ';
+    setEmailsToSend(newVal);
+    setShowToSendSuggestions(false);
+    toSendTextareaRef.current?.focus();
   };
 
   const handleSeedDatabase = async () => {
@@ -429,6 +487,32 @@ export default function MyScripts() {
                     <button
                       key={email}
                       onClick={() => handleSuggestionClick(email)}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-700 text-sm text-slate-200 transition-colors"
+                    >
+                      {email}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6 relative">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Emails To Send (Targets)</label>
+              
+              <textarea
+                ref={toSendTextareaRef}
+                value={emailsToSend}
+                onChange={handleToSendEmailsChange}
+                placeholder="e.g. client1@gmail.com, investor2@company.com"
+                className="w-full bg-background/50 border border-boder rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors text-sm min-h-[80px]"
+              />
+              
+              {showToSendSuggestions && (
+                <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-boder rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                  {toSendSuggestions.map(email => (
+                    <button
+                      key={email}
+                      onClick={() => handleToSendSuggestionClick(email)}
                       className="w-full text-left px-4 py-2 hover:bg-slate-700 text-sm text-slate-200 transition-colors"
                     >
                       {email}

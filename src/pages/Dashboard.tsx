@@ -41,7 +41,7 @@ export default function Dashboard() {
     else currentPhase = 3;
   }
   
-  const [script, setScript] = useState<{subject: string, bodyHtml: string, campaignEmails?: string} | null>(null);
+  const [script, setScript] = useState<{subject: string, bodyHtml: string, campaignEmails?: string, emailsToSend?: string} | null>(null);
   const [chromeProfile, setChromeProfile] = useState<string>('Profile 1');
   const [teamEmails, setTeamEmails] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<Checklist>({
@@ -81,7 +81,8 @@ export default function Dashboard() {
           setScript({ 
             subject: scriptData.subject, 
             bodyHtml: scriptData.bodyHtml,
-            campaignEmails: scriptData.campaignEmails
+            campaignEmails: scriptData.campaignEmails,
+            emailsToSend: scriptData.emailsToSend
           });
         } else {
           setScript(null);
@@ -181,9 +182,9 @@ export default function Dashboard() {
   };
 
   const handleCopyEmails = async () => {
-    if (!script?.campaignEmails) return;
+    if (!script?.emailsToSend) return;
     try {
-      await navigator.clipboard.writeText(script.campaignEmails);
+      await navigator.clipboard.writeText(script.emailsToSend);
       setCopyEmailsSuccess(true);
       setTimeout(() => setCopyEmailsSuccess(false), 2000);
     } catch (err) {
@@ -197,7 +198,7 @@ export default function Dashboard() {
     tempDiv.innerHTML = script.bodyHtml;
     const plainText = tempDiv.textContent || tempDiv.innerText || '';
     
-    let mailtoLink = `mailto:?bcc=${encodeURIComponent(script.campaignEmails || '')}&subject=${encodeURIComponent(script.subject)}&body=${encodeURIComponent(plainText)}`;
+    let mailtoLink = `mailto:?bcc=${encodeURIComponent(script.emailsToSend || '')}&subject=${encodeURIComponent(script.subject)}&body=${encodeURIComponent(plainText)}`;
     window.open(mailtoLink, '_blank');
   };
 
@@ -391,7 +392,7 @@ export default function Dashboard() {
                 Today's Script
               </h2>
               <div className="flex items-center gap-2">
-                {script?.campaignEmails && (
+                {script?.emailsToSend && (
                   <button
                     onClick={handleCopyEmails}
                     className={cn(
@@ -437,6 +438,13 @@ export default function Dashboard() {
                   <label className="text-[10px] uppercase text-primary font-bold tracking-widest block">Subject Line</label>
                   <p className="text-lg font-semibold text-white bg-slate-800/30 p-3 rounded-lg border border-boder italic">{script.subject}</p>
                 </div>
+
+                {script.emailsToSend && (
+                  <div className="mb-4 space-y-1">
+                    <label className="text-[10px] uppercase text-primary font-bold tracking-widest block">Target Emails</label>
+                    <p className="text-sm text-slate-300 bg-slate-800/30 p-3 rounded-lg border border-boder break-all">{script.emailsToSend}</p>
+                  </div>
+                )}
                 
                 <div className="space-y-1 flex-1 flex flex-col mb-4 min-h-0">
                   <label className="text-[10px] uppercase text-primary font-bold tracking-widest block">Body Content</label>
