@@ -17,13 +17,19 @@ interface Checklist {
 }
 
 export default function Dashboard() {
-  const { config, currentDay, currentPhase } = useAppContext();
-  const { user } = useAuth();
+  const { config, currentDay, currentPhase, isCompleted } = useAppContext();
+  const { user, profile, updateProfile } = useAuth();
   
-  const isCompleted = currentDay >= 28;
+  const displayDay = currentDay > 28 ? 28 : currentDay;
   
   const [script, setScript] = useState<{subject: string, bodyHtml: string, campaignEmails?: string} | null>(null);
   const [chromeProfile, setChromeProfile] = useState<string>('Profile 1');
+
+  useEffect(() => {
+    if (profile?.chromeProfile) {
+      setChromeProfile(profile.chromeProfile);
+    }
+  }, [profile]);
   const [teamEmails, setTeamEmails] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<Checklist>({
     sent: false, replied: false, markedImportant: false, spamCheck: false
@@ -46,13 +52,13 @@ export default function Dashboard() {
       try {
         let scriptData = null;
         // First try to fetch personal script
-        const userDocSnap = await getDoc(doc(db, 'user_scripts', `${user.uid}_${currentDay}`));
+        const userDocSnap = await getDoc(doc(db, 'user_scripts', `${user.uid}_${displayDay}`));
         
         if (userDocSnap.exists()) {
           scriptData = userDocSnap.data();
         } else {
           // Fallback to global script
-          const docSnap = await getDoc(doc(db, 'scripts', currentDay.toString()));
+          const docSnap = await getDoc(doc(db, 'scripts', displayDay.toString()));
           if (docSnap.exists()) {
             scriptData = docSnap.data();
           }
@@ -182,6 +188,11 @@ export default function Dashboard() {
     window.open(mailtoLink, '_blank');
   };
 
+  const handleProfileChange = (newProfile: string) => {
+    setChromeProfile(newProfile);
+    updateProfile({ chromeProfile: newProfile });
+  };
+
   const generateLauncher = () => {
     const batContent = `@echo off\nstart chrome --profile-directory="${chromeProfile}" "${window.location.origin}"`;
     const blob = new Blob([batContent], { type: 'text/plain' });
@@ -216,7 +227,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-end mb-4">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              {isCompleted ? "Warm-up Completed 🎉" : `Day ${currentDay} / 28`}
+              {isCompleted ? "Warm-up Completed 🎉" : `Day ${displayDay} / 28`}
             </h1>
             <p className="text-slate-400 font-medium">
               {isCompleted ? "Congratulations! You have completed the 28-day warm-up plan." : `Phase ${currentPhase} Warm-up`}
@@ -228,7 +239,7 @@ export default function Dashboard() {
             <input 
               type="text" 
               value={chromeProfile}
-              onChange={(e) => setChromeProfile(e.target.value)}
+              onChange={(e) => handleProfileChange(e.target.value)}
               className="bg-background border border-border rounded-lg px-2 py-1 text-sm text-white w-24 focus:outline-none focus:border-primary"
               placeholder="Profile 1"
             />
@@ -339,7 +350,7 @@ export default function Dashboard() {
              <h2 className="text-lg font-semibold text-white mb-4">Account Rotation (Today)</h2>
              {teamEmails.length > 0 ? (
                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                 {getAccountRotationForDay(teamEmails, currentDay).map((rotation, idx) => {
+                 {getAccountRotationForDay(teamEmails, displayDay).map((rotation, idx) => {
                    const isMe = user?.email && (rotation.from === user.email || rotation.to === user.email);
                    return (
                      <div key={idx} className={cn(
@@ -435,7 +446,7 @@ export default function Dashboard() {
                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                   <FileText className="w-8 h-8 opacity-50" />
                 </div>
-                <p>No script assigned for Day {currentDay} yet.</p>
+                <p>No script assigned for Day {displayDay} yet.</p>
               </div>
             )}
           </div>
