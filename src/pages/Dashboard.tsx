@@ -1,20 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { Check, Copy, ShieldAlert, CheckCircle2, FileText, Download, Mail, CopyPlus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { getAccountRotationForDay } from '../lib/warmup-data';
 
-interface Checklist {
-  sent: boolean;
-  replied: boolean;
-  markedImportant: boolean;
-  spamCheck: boolean;
-}
+type Checklist = Record<string, boolean>;
 
 export default function Dashboard() {
   const { config } = useAppContext();
@@ -44,9 +39,7 @@ export default function Dashboard() {
   const [script, setScript] = useState<{subject: string, bodyHtml: string, campaignEmails?: string, emailsToSend?: string} | null>(null);
   const [chromeProfile, setChromeProfile] = useState<string>('Profile 1');
   const [teamEmails, setTeamEmails] = useState<string[]>([]);
-  const [checklist, setChecklist] = useState<Checklist>({
-    sent: false, replied: false, markedImportant: false, spamCheck: false
-  });
+  const [checklist, setChecklist] = useState<Checklist>({});
   const [actualVolume, setActualVolume] = useState<number>(0);
   const [repliesReceived, setRepliesReceived] = useState<number>(0);
   const [localVolume, setLocalVolume] = useState<string>('0');
@@ -54,9 +47,20 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [copyEmailsSuccess, setCopyEmailsSuccess] = useState(false);
+  
+  const [weeklySent, setWeeklySent] = useState(0);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const logId = `${user?.uid}_${todayStr}`;
+
+  // Initialize empty checklist based on config
+  useEffect(() => {
+    if (config?.checklistItems && Object.keys(checklist).length === 0) {
+      const initial: Checklist = {};
+      config.checklistItems.forEach(item => initial[item.id] = false);
+      setChecklist(initial);
+    }
+  }, [config?.checklistItems]);
 
   useEffect(() => {
     // Fetch Script
@@ -91,7 +95,30 @@ export default function Dashboard() {
         handleFirestoreError(err, OperationType.GET, `user_scripts`);
       }
     };
+
+    const fetchWeeklyStats = async () => {
+      if (!user) return;
+      try {
+        const start = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        const end = format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        const q = query(collection(db, 'logs'), 
+          where('userId', '==', user.uid),
+          where('date', '>=', start),
+          where('date', '<=', end)
+        );
+        const snaps = await getDocs(q);
+        let total = 0;
+        snaps.forEach(doc => {
+          total += (doc.data().actualVolume || 0);
+        });
+        setWeeklySent(total);
+      } catch (err) {
+        console.error("Failed to fetch weekly stats", err);
+      }
+    };
+
     fetchScript();
+    fetchWeeklyStats();
   }, [currentDay, user]);
 
   useEffect(() => {
@@ -203,7 +230,7 @@ export default function Dashboard() {
   };
 
   const generateLauncher = () => {
-    const batContent = `@echo off\nstart chrome --profile-directory="${chromeProfile}" "${window.location.origin}"`;
+    const batContent = `@echo off\nstart chrome --profile-directory="${chromeProfile}" "${window.location.origin}"\nstart outlook.exe`;
     const blob = new Blob([batContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -216,19 +243,28 @@ export default function Dashboard() {
   };
 
   const getTargetVolume = () => {
-    if (currentPhase === 1) return '2-5';
-    if (currentPhase === 2) return '6-12';
-    return '15-30';
+    if (currentPhase === 1) return config?.phaseTargets?.phase1 || 5;
+    if (currentPhase === 2) return config?.phaseTargets?.phase2 || 12;
+    return config?.phaseTargets?.phase3 || 30;
   };
 
   const calculateProgress = () => {
-    const total = 4;
-    const completed = Object.values(checklist).filter(Boolean).length;
+    if (!config?.checklistItems?.length) return 0;
+    const total = config.checklistItems.length;
+    let completed = 0;
+    config.checklistItems.forEach(item => {
+      if (checklist[item.id]) completed++;
+    });
     return Math.round((completed / total) * 100);
   };
 
   const progress = calculateProgress();
-  const allChecked = progress === 100;
+  const targetVol = getTargetVolume();
+  const volumeProgress = Math.min(100, Math.round((actualVolume / targetVol) * 100));
+  const allChecked = progress === 100 && volumeProgress === 100;
+  
+  const weeklyTarget = targetVol * 5;
+  const remainingThisWeek = Math.max(0, weeklyTarget - weeklySent);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -286,7 +322,15 @@ export default function Dashboard() {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-lg font-semibold text-white">Daily Checklist</h2>
-                <p className="text-sm text-slate-400 mt-1">Target: {getTargetVolume()} emails/day</p>
+                <div className="flex items-center gap-4 mt-2">
+                  <p className="text-sm text-slate-400">Target: {targetVol} emails/day</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${volumeProgress}%` }}></div>
+                    </div>
+                    <span className="text-xs text-slate-400">{actualVolume}/{targetVol}</span>
+                  </div>
+                </div>
               </div>
               <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" 
                 style={{
@@ -299,19 +343,14 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-4 relative z-10">
-              {[
-                { key: 'sent', label: 'Emails Sent' },
-                { key: 'replied', label: 'Threads Replied' },
-                { key: 'markedImportant', label: 'Marked Important' },
-                { key: 'spamCheck', label: 'Spam Checked & Pulled' },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer group" onClick={(e) => {
+              {(config?.checklistItems || []).map(({ id, label }) => (
+                <label key={id} className="flex items-center gap-3 cursor-pointer group" onClick={(e) => {
                   e.preventDefault();
-                  handleCheck(key as keyof Checklist);
+                  handleCheck(id);
                 }}>
                   <div className={cn(
                     "w-5 h-5 flex items-center justify-center rounded border-2 transition-colors",
-                    checklist[key as keyof Checklist] 
+                    checklist[id] 
                       ? "border-success bg-success/20 text-success" 
                       : "border-slate-700 text-transparent hover:border-slate-500"
                   )}>
@@ -319,7 +358,7 @@ export default function Dashboard() {
                   </div>
                   <span className={cn(
                     "text-sm transition-colors",
-                    checklist[key as keyof Checklist] ? "text-slate-500 line-through" : "text-slate-300 group-hover:text-white"
+                    checklist[id] ? "text-slate-500 line-through" : "text-slate-300 group-hover:text-white"
                   )}>
                     {label}
                   </span>
@@ -350,6 +389,32 @@ export default function Dashboard() {
                     className="w-full bg-background/50 border border-boder rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary transition-colors"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Weekly Sprint Widget */}
+          <div className="glass rounded-2xl p-6 bg-gradient-to-br from-slate-900 to-slate-800 border-primary/20">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
+              Weekly Sprint
+              <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full">Mon - Fri</span>
+            </h2>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-3xl font-bold text-white">{weeklySent}</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Emails Sent</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-slate-300">{remainingThisWeek}</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Remaining Target</p>
+                </div>
+              </div>
+              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-500 transition-all" 
+                  style={{ width: `${Math.min(100, (weeklySent / weeklyTarget) * 100)}%` }}
+                ></div>
               </div>
             </div>
           </div>

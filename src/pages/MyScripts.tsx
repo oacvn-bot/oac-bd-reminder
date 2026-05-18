@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppContext } from '@/contexts/AppContext';
 import { db } from '@/firebase/config';
 import { collection, doc, getDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { EditorContent, useEditor } from '@tiptap/react';
@@ -23,6 +24,7 @@ const TEAM_EMAILS = [
 
 export default function MyScripts() {
   const { user, profile } = useAuth();
+  const { config } = useAppContext();
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [subject, setSubject] = useState("");
   const [campaignEmails, setCampaignEmails] = useState("");
@@ -497,7 +499,23 @@ export default function MyScripts() {
             </div>
 
             <div className="mb-6 relative">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Emails To Send (Targets)</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block">Emails To Send (Targets)</label>
+                {config?.contactLists && config.contactLists.length > 0 && (
+                  <select 
+                    onChange={(e) => {
+                      if (e.target.value) setEmailsToSend(e.target.value);
+                      e.target.value = ""; // reset
+                    }}
+                    className="bg-slate-800 text-xs text-slate-300 border border-boder rounded px-2 py-1 focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">+ Load from List</option>
+                    {config.contactLists.map(list => (
+                      <option key={list.id} value={list.emails}>{list.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               
               <textarea
                 ref={toSendTextareaRef}

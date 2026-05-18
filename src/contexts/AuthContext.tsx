@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             'oac.vn@onearw.com',
             'lauren.luu@onearw.com',
             'ellie.tran@onearw.com',
+            'matthew.dau@onearw.com',
           ];
           let role: 'member' | 'admin' = 'member';
           if (firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email)) {

@@ -49,27 +49,46 @@ export default function UserGuide() {
         {activeTab === 'member' ? (
           <div className="space-y-8 text-slate-300">
             <section>
-              <h2 className="text-2xl font-semibold text-white mb-4 border-b border-boder pb-2">1. Quy trình làm việc hàng ngày</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4 border-b border-boder pb-2">1. Quy trình làm việc hàng ngày (Chi tiết)</h2>
               <ul className="space-y-4">
                 <li className="flex gap-3">
                   <CheckCircle2 className="w-6 h-6 text-primary shrink-0" />
                   <div>
-                    <strong className="text-white block">Bước 1: Lấy thông tin Script</strong>
-                    Vào tab <span className="text-primary">Dashboard</span>, bạn sẽ thấy tiến độ ngày hôm nay. Xem các Script mẫu được Admin soạn sẵn. Bạn có thể sử dụng tính năng <strong>Draft in Gmail</strong> để hệ thống tự mở cửa sổ soạn thảo.
+                    <strong className="text-white block">Bước 1: Chuẩn bị & Kích hoạt (Auto-Trigger)</strong>
+                    Mỗi ngày đúng 9:00 sáng, nếu bạn đã cài đặt Task Scheduler với file .bat, Chrome sẽ tự động bật tab làm việc trực tiếp vào Dashboard mà không cần login lại. Hệ thống sẽ xác định bạn đang ở Ngày mấy / Phase mấy để đưa ra target volume (số lượng email gửi) phù hợp.
                   </div>
                 </li>
                 <li className="flex gap-3">
                   <CheckCircle2 className="w-6 h-6 text-primary shrink-0" />
                   <div>
-                    <strong className="text-white block">Bước 2: Gửi và Nhận Email</strong>
-                    Dùng thông tin từ tab Dashboard (Campaign Emails) để gửi email đến các thành viên trong team. Nội dung nên được tùy biến để tránh bị Google đánh dấu là email spam/máy móc.
+                    <strong className="text-white block">Bước 2: Nhận Nhiệm vụ & Kịch bản (Today's Script)</strong>
+                    Trên Dashboard, bạn sẽ thấy phần <strong>Today's Script</strong> và danh sách <strong>Target Emails</strong>. Hãy quan sát thanh <strong>Progress Bar</strong> mục tiêu gửi email (Target Volume) và thẻ <strong>Weekly Sprint</strong> để biết bạn cần gửi bao nhiêu email hôm nay và trong cả tuần để đạt đủ KPI.
                   </div>
                 </li>
                 <li className="flex gap-3">
                   <CheckCircle2 className="w-6 h-6 text-primary shrink-0" />
                   <div>
-                    <strong className="text-white block">Bước 3: Báo cáo kết quả (Log)</strong>
-                    Sau khi hoàn thành, nhớ quay lại mục <strong>Log Form</strong> ở cuối trang Dashboard để điền số lượng email đã gửi, số reply nhận được, và đánh dấu nếu có email bị rơi vào Spam. Bạn chỉ có thể log 1 lần mỗi ngày!
+                    <strong className="text-white block">Bước 3: Thực thi Gửi Email (Draft in Gmail)</strong>
+                    - Click nút <strong>Copy Emails</strong> để copy toàn bộ địa chỉ nhận.<br/>
+                    - Click nút <strong>Draft in Gmail</strong> để mở tự động cửa sổ soạn thảo Gmail (nếu nó không dán nội dung chuẩn, hãy click <strong>Copy Body</strong> và dán vào phần soạn thảo).<br/>
+                    - <em>Lưu ý quan trọng:</em> Hãy tùy chỉnh (sửa vài từ ngữ nhỏ) vào nội dung để email trông cá nhân hóa, tránh bị Google quét trùng lặp chữ ký 100%. Sau đó bấm Send.
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-primary shrink-0" />
+                  <div>
+                    <strong className="text-white block">Bước 4: Phản hồi chéo (Co-worker Interaction)</strong>
+                    Khi nhận được email warm-up từ người khác, bạn CẦN làm 3 việc:<br/>
+                    1. Trả lời (Reply) email đó.<br/>
+                    2. Đánh dấu Quan trọng (Star / Mark Important).<br/>
+                    3. Check hòm Spam: Nếu email lọt vào spam, bắt buộc phải report "Not spam" và kéo ra ngoài Inbox. Hành động này là cốt lõi để "làm ấm" uy tín email.
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-primary shrink-0" />
+                  <div>
+                    <strong className="text-white block">Bước 5: Báo cáo kết quả (Log)</strong>
+                    Cuối ngày, quay lại Dashboard, tích đủ các mục trong <strong>Daily Checklist</strong> (Sent, Replied, Marked Important, Spam Checked). Nhập số lượng gửi/nhận thực tế để Admin theo dõi qua tab Team Stats.
                   </div>
                 </li>
               </ul>
@@ -113,11 +132,26 @@ export default function UserGuide() {
                 <li>
                   <strong className="text-white">Gán người nhận (Campaign Emails):</strong> Khi soạn Script, bạn click vào các "pills" tên thành viên ở trên ô nhập để gán nhanh danh sách người nhận (recipients).
                 </li>
+                <li>
+                  <strong className="text-white">Contact Lists:</strong> Kế bên ô "Emails To Send", Admin có thể dùng Dropdown <em>+ Load from List</em> để nạp nhanh danh sách email từ một tệp chiến dịch định sẵn (VD: Tech Startups) mà không cần copy-paste thủ công.
+                </li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-white mb-4 border-b border-boder pb-2">2. Quản lý Ngày Bắt Đầu (Start Date)</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4 border-b border-boder pb-2">2. Cấu hình Hệ thống (Firebase Config)</h2>
+              <p className="mb-4">
+                Các tính năng <strong>Custom Checklist</strong>, <strong>Phase Target Volumes</strong>, và danh sách <strong>Contact Lists</strong> hiện đang được lưu ở mức độ toàn cầu (Global Config). Để chỉnh sửa, Admin cần truy cập trực tiếp vào cơ sở dữ liệu.
+              </p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Truy cập vào <strong className="text-white">Firebase Console {'>'} Firestore Database</strong>.</li>
+                <li>Mở collection <code>config</code>, chọn document <code>app</code>.</li>
+                <li>Tại đây, bạn có thể thêm/xóa các mục tiêu trong mảng <code>checklistItems</code>, điều chỉnh KPI theo giai đoạn trong map <code>phaseTargets</code>, hoặc định nghĩa các danh sách khách hàng cố định trong mảng <code>contactLists</code>. Mọi thay đổi sẽ tự động Sync tới Dashboard của toàn bộ team theo thời gian thực (Real-time).</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-white mb-4 border-b border-boder pb-2">3. Quản lý Ngày Bắt Đầu (Start Date)</h2>
               <p className="mb-4">
                 Chu kỳ 28 ngày của toàn team được đồng bộ qua 1 biến duy nhất là <code>startDate</code>. 
               </p>
@@ -140,6 +174,7 @@ export default function UserGuide() {
                 <li>oac.vn@onearw.com</li>
                 <li>lauren.luu@onearw.com</li>
                 <li>ellie.tran@onearw.com</li>
+                <li>matthew.dau@onearw.com</li>
               </ul>
               <p className="mt-4 text-sm italic">
                 Lưu ý: Để cấp quyền cho một Admin mới, bạn cần truy cập vào Firebase Console {'>'} Firestore Database {'>'} Collection `users` và sửa field `role` của người đó thành `admin`, hoặc chỉnh sửa trực tiếp trong source code.

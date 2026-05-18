@@ -6,6 +6,9 @@ import { differenceInDays, startOfDay } from 'date-fns';
 interface AppConfig {
   startDate: string; // ISO string
   totalAccounts: number;
+  checklistItems?: { id: string; label: string }[];
+  phaseTargets?: { phase1: number; phase2: number; phase3: number };
+  contactLists?: { id: string; name: string; emails: string }[];
 }
 
 interface AppContextType {
@@ -27,8 +30,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setConfig({
-          startDate: data.startDate.toDate().toISOString(),
+          startDate: data.startDate?.toDate().toISOString() || new Date().toISOString(),
           totalAccounts: data.totalAccounts || 10,
+          checklistItems: data.checklistItems || [
+            { id: 'sent', label: 'Emails Sent' },
+            { id: 'replied', label: 'Threads Replied' },
+            { id: 'markedImportant', label: 'Marked Important' },
+            { id: 'spamCheck', label: 'Spam Checked & Pulled' }
+          ],
+          phaseTargets: data.phaseTargets || { phase1: 5, phase2: 12, phase3: 30 },
+          contactLists: data.contactLists || [
+            { id: '1', name: 'Tech Startups', emails: 'tech1@example.com, tech2@example.com' }
+          ]
         });
       }
       setLoading(false);
